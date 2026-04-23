@@ -451,10 +451,7 @@ print("Same key?", KA == KB)
 ### Output Evidence
 
 ![task 9 run 1](task9_run1.png)
-> Show: terminal output of first run (original values) with "Keys match: True".
-
-![task 9 run 3](task9_run2.png)
-> Show: terminal output of second run (changed values) with "Keys match: True".
+![task 9 run 3](task9_run2.png).
 
 ### Recorded Values
 
@@ -484,7 +481,7 @@ Reason through — without code — why an attacker who only observes the Diffie
 
 ### Steps Performed
 
-This is a **pen-and-paper reasoning task**. No commands were run.
+No commands were run for this task (pen and paper).
 
 - Identified what a passive attacker can observe: `p`, `g`, `A = g^a mod p`, `B = g^b mod p`
 - Explained why recovering `a` or `b` from these values is computationally infeasible
@@ -532,19 +529,19 @@ Hardness Assumption: We can assume that if eve wants to find K, they must be abl
 
 ### Explanation
 
-Describe the passive adversary model:  
+Describe the passive adversary model:    
 A passive adversary (Typically known as Eve) acts in a manner that similar to that of a wiretap. They can intercept, record, and observe every single bit of data transmitted over the network between Alice and Bob at any time as long as Eve is connected and listening. However, they do not have the ability to alter data, drop packets, or inject their own messages into the communication stream. This means that the main target of Eve is to collect data and from that data derive keys or other important data so that they can engage in further attacks. This is not typically what the goal of a man in the middle attack, as MITM is mostly just for data collection.
 
-Why the shared secret remains hidden:  
+Why the shared secret remains hidden:    
 In the Diffie Hellman exchange we know and gurantee that the actual shared secret (K=g^xy (mod p)) is never transmitted however, we do know that all public data is at some point transmitted. This means that Eve is only able to observe the public parameters (p and g) and the public keys (X = g^x and Y = g^y). Since the Diffie Hellman computational assumption holds true for large groups of data, it means that Eve cannot efficiently calculate g^xy just by knowing g^x or g^y. Therefore, the final symmetric key remains completely hidden from them as it is computationally impossible for Eve to derive this data in a lifetime with modern technology.
 
-Relate to Python script:  
+Relate to Python script:    
 In the python script above that we made we know that Eve is able to see p=23, g=5, X=8, Y=19. Without knowing either x=6 or y=15, they cannot easily determine what the final key K(A) and K(B) will equal to. In our script the Final key on the first round is 2 and on the second round is 12, these 2 keys are completely safe from Eve but are able to be used by Alice and Bob without worry.
 
-Why observing X and Y is different from knowing x and y:
+Why observing X and Y is different from knowing x and y:  
 X and Y are the outputs of a one-way modular function, this makes the operation non linear and saves the data from being found. Knowing this result does not allow an attacker to easily find the inputs (x or y) due to the hardness assumption from the Discrete Logarithm Problem. This provides a safety net for these two values and therfore keeps the keys safe as well.
 
-Why DH is useful against eavesdropping but not yet authenticated: 
+Why DH is useful against eavesdropping but not yet authenticated:  
 Diffie Hellman is able to very effectively solve the problem of establishing a shared secret over an open channel without engaging in the pre sharing process of any keys, this makes passive eavesdropping nearly impossible. However, the math we see here provides absolutely no proof of identity from either side which can lead to issues down the line. Alice knows that they established a secure key with someone, but the math cannot prove that the "someone" is actually Bob. It is possible that if Eve where to somehow intercept a Key they can start communication with either Alice or Bob and begin an attack from here.
 
 ---
