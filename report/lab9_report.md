@@ -450,10 +450,10 @@ print("Same key?", KA == KB)
 
 ### Output Evidence
 
-> **[INSERT SCREENSHOT HERE — task9_run1.png]**
+![task 9 run 1](task9_run1.png)
 > Show: terminal output of first run (original values) with "Keys match: True".
 
-> **[INSERT SCREENSHOT HERE — task9_run2.png]**
+![task 9 run 3](task9_run2.png)
 > Show: terminal output of second run (changed values) with "Keys match: True".
 
 ### Recorded Values
