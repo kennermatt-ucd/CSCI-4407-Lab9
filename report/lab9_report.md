@@ -400,8 +400,8 @@ Implement and run the Diffie-Hellman key exchange in Python to demonstrate how t
 
 ### Steps Performed
 
-- Ran the provided DH script with the original values (`p=23`, `g=5`)
-- Modified `p`, `g`, and the private keys and ran again
+- Ran the provided DH script with the original values (`x=6`, `y=15`)
+- Modified `x`, `y` and ran again
 - Confirmed that both runs produce matching shared keys on both sides
 
 ### Commands / Code Used
@@ -458,18 +458,21 @@ print("Same key?", KA == KB)
 
 ### Recorded Values
 
-| Run | p | g | Alice private (a) | Bob private (b) | Alice public (A) | Bob public (B) | Shared key | Match? |
+| Run | p | g | Alice private (x) | Bob private (y) | Alice public (X) | Bob public (Y) | Shared key | Match? |
 |-----|---|---|-------------------|-----------------|-----------------|----------------|------------|--------|
-| 1 | 23 | 5 | [INSERT] | [INSERT] | [INSERT] | [INSERT] | [INSERT] | [INSERT] |
-| 2 | [INSERT] | [INSERT] | [INSERT] | [INSERT] | [INSERT] | [INSERT] | [INSERT] | [INSERT] |
+| 1 | 23 | 5 | 6 | 15 | 8 | 19 | 2 | True |
+| 2 | 23 | 5 | 9 | 12 | 11 | 18 | 12 | True |
 
 ### Explanation
 
-**What was done:** We ran a Python implementation of the Diffie-Hellman key exchange. Alice and Bob each independently chose a private key (`a` and `b`), computed their respective public keys (`A = g^a mod p` and `B = g^b mod p`), exchanged those public values, and each computed the shared secret from the other party's public key and their own private key. We then ran the script a second time with different parameter values to confirm the protocol is not tied to specific numbers.
+**Why Alice and Bob obtain the same key?** 
+They obtain the same key because of the mathematical properties of exponents (g^x)^y = g^xy = (g^y)^x. We can see that by raising the received public value to a user's own private exponent, both parties are able to compute g^xy (modp) to obtain the same key.
 
-**What happened:** Both runs produced the same shared key on both sides — Alice's computed value and Bob's computed value matched exactly. This confirms that `(g^a)^b mod p` and `(g^b)^a mod p` always yield the same result, regardless of the specific values of `p`, `g`, `a`, and `b`, as long as `p` is prime and `g` is a valid generator. The shared secret was never directly transmitted — only `A` and `B` appeared on the "wire."
+**Why the exchanged public values are not enough to reveal the private exponents?** 
+The public values (X and Y) are calculated using modular arithmetic (also known as clock math). An attacker is able to see X=8, through this they know 5x(mod23)=8. To find x, the attacker must be able to solve the Discrete Logarithm Problem and while this is easy for our toy example (p=23), if p is a 2048-bit prime number then reversing this operation is computationally impossible for the lifetime of a human using modern computers.
 
-**Why it matters:** Diffie-Hellman solves a problem that was considered unsolvable before 1976: two parties who have never met and share no prior secret can establish a shared secret over a completely public channel. The security comes from the discrete logarithm problem — given `g`, `p`, and `A = g^a mod p`, there is no known efficient algorithm for recovering `a` when `p` is a large prime. This means an eavesdropper who records every transmitted value still cannot compute the shared key. DH is the key exchange mechanism underlying TLS, SSH, and most modern secure communication protocols.
+**Why this is educational and not suitable for real deployment?** 
+This script uses small values (p=23), so this means that an attacker could just guess every possible value of x (from 1 to 22) in a fraction of a millisecond and find the data that they need. Real world deployments on the other hand use massive prime numbers (e.g., 2048-bit or 4096-bit numbers) to ensure the discrete logarithm problem remains unsolvable by modern technology.
 
 ---
 
