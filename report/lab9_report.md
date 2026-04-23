@@ -407,11 +407,45 @@ Implement and run the Diffie-Hellman key exchange in Python to demonstrate how t
 ### Commands / Code Used
 
 ```bash
-python3 dh.py
+python3 dh_demo.py
 ```
 
 ```python
-# [CODE HERE — dh.py]
+# dh_demo.py
+
+p = 23 #A small prime number (aka the modulus)
+g = 5  #The generator
+
+#Alice's secret exponent
+x = 6
+
+#Bob's secret exponent
+y = 15
+
+#Public values (These are what we are sending over the network)
+X = pow(g, x, p)
+Y = pow(g, y, p)
+
+#Shared keys
+KA = pow(Y, x, p)
+KB = pow(X, y, p)
+
+print("--- Public Parameters (Visible to everyone) ---")
+print("Public prime p =", p)
+print("Generator g =", g)
+
+print("\n--- Secret Values (Never transmitted) ---")
+print("Alice secret x =", x)
+print("Bob secret y =", y)
+
+print("\n--- Transmission (Visible to Eve) ---")
+print("Alice sends X = g^x mod p =", X)
+print("Bob sends Y = g^y mod p =", Y)
+
+print("\n--- Final Calculation ---")
+print("Alice computes KA = Y^x mod p =", KA)
+print("Bob computes KB = X^y mod p =", KB)
+print("Same key?", KA == KB)
 ```
 
 ### Output Evidence
