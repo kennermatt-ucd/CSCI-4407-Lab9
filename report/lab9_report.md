@@ -466,7 +466,7 @@ print("Same key?", KA == KB)
 ### Explanation
 
 **Why Alice and Bob obtain the same key?** 
-They obtain the same key because of the mathematical properties of exponents (g^x)^y = g^xy = (g^y)^x. We can see that by raising the received public value to a user's own private exponent, both parties are able to compute g^xy (modp) to obtain the same key.
+They obtain the same key because of the mathematical properties of exponents (g^x)^y = g^xy = (g^y)^x. We can see that by raising the received public value to a user's own private exponent, both parties are able to compute g^xy (mod p) to obtain the same key.
 
 **Why the exchanged public values are not enough to reveal the private exponents?** 
 The public values (X and Y) are calculated using modular arithmetic (also known as clock math). An attacker is able to see X=8, through this they know 5x(mod23)=8. To find x, the attacker must be able to solve the Discrete Logarithm Problem and while this is easy for our toy example (p=23), if p is a 2048-bit prime number then reversing this operation is computationally impossible for the lifetime of a human using modern computers.
@@ -492,27 +492,60 @@ This is a **pen-and-paper reasoning task**. No commands were run.
 
 ### Evidence
 
-> **[INSERT HANDWRITTEN WORK / TYPED REASONING HERE]**
+Public Parameters:
+  - p (Prime number modulus)
+  - g (The generateor value)
+    
+Key Exchange:
+ - x (Alice's random private exponent)
+ - X = g^x (mod p) (Alice's computed public value)
+ - X is then sent over the network
+ - y (Bob's random private exponent)
+ - Y = g^x (mod p) (Bob's computed public value)
+ - Y is the sent over the network
+   
+Shared Secret Calculation:
+ - Y is recieved by Alice, then the key is computed:  
+        K(A) = Y^x  (mod p) = (g^y)^x  (mod p) = g^xy  (mod p)
+   
+ - X is recieved by Bob, then the key is computed:
+        K(B) = X^y  (mod P) = (G^x)^y  (mod p) = g^xy  (mod p)
+
+This structure implies that K(A) = K(B) = K.
+
+What the adversary (eve) can see:
+- Eve is able to see the public items: p,g,X,Y
+- Eve wants to know what the key is: K = g^xy (mod p)  
+Hardness Assumption: We can assume that if eve wants to find K, they must be able to x or y. However, we know that this is not possible through means of calculation as to find y from Y = g^y (mod p) we would have to be able to break the Discrete Logarithm Problem. As mentioned before this is not feasible by any current humans means.
 
 ### Key Equations
 
 | Value | Known to Attacker? |
 |-------|-------------------|
-| `p` (prime modulus) | Yes — public |
-| `g` (generator) | Yes — public |
-| `A = g^a mod p` | Yes — transmitted publicly |
-| `B = g^b mod p` | Yes — transmitted publicly |
-| `a` (Alice's private key) | No — requires solving DLP |
-| `b` (Bob's private key) | No — requires solving DLP |
-| `g^(ab) mod p` (shared key) | No — cannot derive without `a` or `b` |
+| `p` (prime modulus) | Yes — public knowledge |
+| `g` (generator) | Yes — public knowledge |
+| `X = g^x mod p` | Yes — Is transmitted publicly |
+| `Y = g^y mod p` | Yes — Is transmitted publicly |
+| `x` (Alice's private key) | No — requires solving the Discrete Logarithm Problem |
+| `y` (Bob's private key) | No — requires solving the Discrete Logarithm Problem |
+| `g^(xy) mod p` (shared key) | No — cannot derive without finding `x` or `y`, this is not possible |
 
 ### Explanation
 
-**What was done:** We identified every value a passive eavesdropper can observe during a Diffie-Hellman exchange and evaluated whether those values are sufficient to compute the shared secret.
+Describe the passive adversary model:  
+A passive adversary (Typically known as Eve) acts in a manner that similar to that of a wiretap. They can intercept, record, and observe every single bit of data transmitted over the network between Alice and Bob at any time as long as Eve is connected and listening. However, they do not have the ability to alter data, drop packets, or inject their own messages into the communication stream. This means that the main target of Eve is to collect data and from that data derive keys or other important data so that they can engage in further attacks. This is not typically what the goal of a man in the middle attack, as MITM is mostly just for data collection.
 
-**What happened:** A passive attacker sees `p`, `g`, `A`, and `B`. To compute the shared key `g^(ab) mod p`, the attacker needs either `a` or `b`. Recovering `a` from `A = g^a mod p` (or `b` from `B`) is the discrete logarithm problem (DLP): given the base `g`, the modulus `p`, and the result `A`, find the exponent `a`. For small values of `p` (like `p=23` in our script), this can be brute-forced by trying every possible exponent. But for a cryptographically large prime — e.g., a 2048-bit `p` — the search space has roughly 10^600 possibilities, and no algorithm is known that can solve the DLP in polynomial time for such parameters. The attacker is therefore computationally blocked.
+Why the shared secret remains hidden:  
+In the Diffie Hellman exchange we know and gurantee that the actual shared secret (K=g^xy (mod p)) is never transmitted however, we do know that all public data is at some point transmitted. This means that Eve is only able to observe the public parameters (p and g) and the public keys (X = g^x and Y = g^y). Since the Diffie Hellman computational assumption holds true for large groups of data, it means that Eve cannot efficiently calculate g^xy just by knowing g^x or g^y. Therefore, the final symmetric key remains completely hidden from them as it is computationally impossible for Eve to derive this data in a lifetime with modern technology.
 
-**Why it matters:** This analysis shows that DH's security is not based on hiding the protocol or the public values — everything is transmitted in the open. Security comes entirely from a mathematical hardness assumption: the infeasibility of the discrete logarithm problem in a large prime group. This is a property called computational security — it does not claim the attacker absolutely cannot break it, only that doing so would require more computation than is feasible in any practical timeframe. This is why key parameters matter: a 512-bit `p` can be broken, a 2048-bit `p` cannot with current technology. NIST currently recommends a minimum of 2048 bits for DH key exchanges.
+Relate to Python script:  
+In the python script above that we made we know that Eve is able to see p=23, g=5, X=8, Y=19. Without knowing either x=6 or y=15, they cannot easily determine what the final key K(A) and K(B) will equal to. In our script the Final key on the first round is 2 and on the second round is 12, these 2 keys are completely safe from Eve but are able to be used by Alice and Bob without worry.
+
+Why observing X and Y is different from knowing x and y:
+X and Y are the outputs of a one-way modular function, this makes the operation non linear and saves the data from being found. Knowing this result does not allow an attacker to easily find the inputs (x or y) due to the hardness assumption from the Discrete Logarithm Problem. This provides a safety net for these two values and therfore keeps the keys safe as well.
+
+Why DH is useful against eavesdropping but not yet authenticated: 
+Diffie Hellman is able to very effectively solve the problem of establishing a shared secret over an open channel without engaging in the pre sharing process of any keys, this makes passive eavesdropping nearly impossible. However, the math we see here provides absolutely no proof of identity from either side which can lead to issues down the line. Alice knows that they established a secure key with someone, but the math cannot prove that the "someone" is actually Bob. It is possible that if Eve where to somehow intercept a Key they can start communication with either Alice or Bob and begin an attack from here.
 
 ---
 
