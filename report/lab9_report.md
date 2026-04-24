@@ -241,24 +241,37 @@ Generate a Certificate Signing Request (CSR) for an entity whose identity needs 
 
 ### Output Evidence
 
-> **[INSERT SCREENSHOT HERE — task5_csr.png]**
-> Show: OpenSSL CSR creation output and CSR details (subject, public key).
+![task5a](task5a.png)
+![task5b](task5b.png)
+
 
 ### CSR Details
 
 | Field | Value |
 |-------|-------|
-| Subject | [INSERT] |
-| Key file | [INSERT] |
-| CSR file | [INSERT] |
+| Subject | C=US, ST=Colorado, L=Denver, O=CU Denver, OU=Computer Science, CN=Alice |
+| Key file | alice_private.pem |
+| CSR file | alice.csr |
 
 ### Explanation
 
-**What was done:** We generated a new RSA key pair for the entity (e.g., a server) and used it to produce a Certificate Signing Request. A CSR is a structured message — formatted according to the PKCS#10 standard — that contains the entity's public key, its claimed identity (Common Name, organization, country, etc.), and a self-signature proving the requester holds the private key corresponding to the submitted public key.
+What was done:
+For this step, we created a Certificate Signing Request (CSR) using Alice’s private key. The CSR is basically a request sent to the Certificate Authority (CA) asking for a certificate. It includes Alice’s identity information (like name and organization), her public key, and a digital signature created using her private key.
 
-**What happened:** OpenSSL produced a `.csr` file containing the entity's identity fields and public key. Inspecting the CSR with `openssl req -text` shows the Subject field exactly as we entered it, along with the public key to be certified. Importantly, the CSR does not contain the private key — only the public half is submitted to the CA.
+What information is included in a CSR:
+The CSR contains three main things: the subject identity (Common Name, organization, etc.), the public key, and a digital signature. The signature is important because it proves that the person creating the request actually owns the private key associated with that public key.
 
-**Why it matters:** The CSR is the formal mechanism by which an entity asks a CA to vouch for its identity. The entity keeps the private key and never sends it anywhere; the CA only needs the public key to issue the certificate. This separation ensures that the CA — or any attacker who might intercept the CSR — cannot impersonate the entity, because they do not hold the private key. In real deployments, a CA would verify the identity claims in the CSR (e.g., confirming domain ownership for a TLS certificate) before signing it.
+What happened:
+When we ran the OpenSSL command, it generated the alice.csr file. When inspecting it using openssl req -text, we could see the subject information we entered and the public key that will be certified. The private key is not included in the CSR, which is important for security.
+
+Why the CA does not sign arbitrary public keys:
+The CA does not just sign any public key it receives, because that would allow attackers to create certificates for identities they don’t actually own. Instead, the CA relies on the information in the CSR and would normally verify the identity before signing it.
+
+Why proof of possession matters:
+The digital signature inside the CSR proves that the requester actually has the private key. This prevents someone from submitting a public key they don’t control. Without this proof, an attacker could request a certificate for someone else’s identity and break the trust model.
+
+Why it matters overall:
+The CSR is an important step in PKI because it connects a real identity to a public key in a secure way. It ensures that only the rightful owner of a key can request a certificate, which helps prevent impersonation and supports secure communication.
 
 ---
 
@@ -277,31 +290,43 @@ Have the CA sign the CSR from Task 5, producing a certificate that binds the ent
 ### Commands / Code Used
 
 ```bash
-# [INSERT COMMANDS HERE — e.g., openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key ...]
+openssl x509 -req -in alice.csr -CA ca_cert.pem -CAkey ca_private.pem \
+-CAcreateserial -out alice_cert.pem -days 365 -sha256
+
+openssl x509 -in alice_cert.pem -text -noout```
 ```
 
 ### Output Evidence
 
-> **[INSERT SCREENSHOT HERE — task6_signing.png]**
-> Show: OpenSSL signing output and certificate details showing Subject and Issuer fields.
+![task6a](task6a.png)
+![task6b](task6b.png)
 
 ### Certificate Details
 
 | Field | Value |
 |-------|-------|
-| Subject | [INSERT — entity identity] |
-| Issuer | [INSERT — CA identity] |
-| Valid From | [INSERT] |
-| Valid To | [INSERT] |
-| Signed by | [INSERT — CA cert file] |
+| Subject | C=US, ST=Colorado, L=Denver, O=CU Denver, OU=Computer Science, CN=Alice |
+| Issuer | C=US, ST=Colorado, L=Denver, O=CU Denver, OU=Computer Science, CN=Lab 9 |
+| Valid From | Apr 24 17:18:25 2026 GMT |
+| Valid To | Apr 24 17:18:25 2027 GMT |
+| Signed by | ca_cert.pem |
 
 ### Explanation
 
-**What was done:** We used the CA's private key and certificate to sign the entity's CSR, producing a signed X.509 certificate. The CA uses its private key to compute a digital signature over the certificate's contents (including the entity's public key and identity), and that signature is embedded in the certificate.
+What was done:
+In this step, we used the CA’s private key and certificate to sign Alice’s CSR and generate a digital certificate. This process takes the information from the CSR and produces a signed certificate that can be verified by others who trust the CA.
 
-**What happened:** The resulting certificate shows two distinct fields: the Subject (the entity whose key is being certified) and the Issuer (the CA that vouches for it). These fields are now different, unlike the self-signed CA certificate from Task 4 where they matched. This Subject/Issuer distinction is what makes a certificate a statement of trust from one party about another, rather than a self-assertion.
+What happened:
+After running the command, a new file called alice_cert.pem was created. When inspecting the certificate, we can clearly see that the Subject field contains Alice’s identity, while the Issuer field contains the CA’s information. This shows that the CA has signed Alice’s certificate instead of it being self-signed.
 
-**Why it matters:** The CA's signature transforms the certificate from a self-claim into a third-party endorsement. Anyone who trusts the CA can now verify the CA's signature on this certificate and be confident that the entity's public key genuinely belongs to the identity named in the Subject field. This is the core mechanism that prevents the key substitution attack described in Task 2: an attacker cannot produce a certificate for their own key while claiming to be the legitimate entity, because they do not control the CA's private key.
+What exactly the CA is asserting:
+By signing the certificate, the CA is confirming that the public key inside the certificate belongs to Alice. It is essentially acting as a trusted third party that verifies and vouches for Alice’s identity.
+
+Why this is better than sending a raw public key:
+If Alice just sent her public key directly, an attacker could replace it with their own key without being detected. However, with a signed certificate, the public key is tied to Alice’s identity through the CA’s signature. This makes it much harder for an attacker to perform a key substitution attack.
+
+Why this helps establish trust:
+If another user (like Bob) trusts the CA, they can verify Alice’s certificate using the CA’s public key. Once verified, Bob can be confident that the public key actually belongs to Alice and has not been tampered with.
 
 ---
 
@@ -320,29 +345,46 @@ Verify the signed certificate from Task 6 using the CA certificate, confirming t
 ### Commands / Code Used
 
 ```bash
-# [INSERT COMMANDS HERE — e.g., openssl verify -CAfile ca.crt server.crt]
+openssl verify -CAfile ca_cert.pem alice_cert.pem
+openssl x509 -in alice_cert.pem -noout -subject -issuer
+openssl x509 -in alice_cert.pem -noout -dates```
 ```
 
 ### Output Evidence
 
 > **[INSERT SCREENSHOT HERE — task7_verify_success.png]**
-> Show: OpenSSL verification output confirming "OK" or equivalent success message.
-
+![task7](task7.png)
 ### Verification Result
 
 | Item | Value |
 |------|-------|
-| CA certificate used | [INSERT] |
-| Certificate verified | [INSERT] |
-| Verification result | [INSERT — OK / success] |
+| CA certificate used | ca_cert.pem |
+| Certificate verified | alice_cert.pem |
+| Verification result | OK |
+
+| Field | Value |
+|------|------|
+| Subject | C=US, ST=Colorado, L=Denver, O=CU Denver, OU=Computer Science, CN=Alice |
+| Issuer | C=US, ST=Colorado, L=Denver, O=CU Denver, OU=Computer Science, CN=Lab 9 |
+| Valid From | Apr 24 17:18:25 2026 GMT |
+| Valid To | Apr 24 17:18:25 2027 GMT |
 
 ### Explanation
 
-**What was done:** We ran `openssl verify` with the CA certificate as the trust anchor and the entity certificate as the target. OpenSSL checks three things: that the certificate's signature was produced by the claimed issuer, that the issuer's public key (from the CA certificate) successfully verifies that signature, and that the certificate is within its validity period.
+What was done:
+In this step, we verified Alice’s certificate using the CA certificate that we created earlier. This checks whether the certificate was actually signed by the CA and whether it can be trusted.
 
-**What happened:** OpenSSL returned an "OK" result, confirming that the entity certificate is authentic and was genuinely signed by our CA. This is the verification a client would perform in a real TLS handshake to confirm it is talking to a legitimate server.
+What happened:
+The verification command returned OK, which means the certificate is valid and was successfully verified using the CA’s public key. We also checked the subject, issuer, and validity dates to confirm that the certificate contains the expected information.
 
-**Why it matters:** Certificate verification is what closes the trust loop. Generating keys and signing certificates is only useful if a relying party can independently confirm the certificate is genuine. By verifying using the CA certificate as the anchor, we confirm the chain: the entity's public key belongs to the stated identity, and the CA has vouched for that binding. Without this verification step, a certificate is just a document with claims — the verification is what makes those claims trustworthy.
+Why verification depends on a trusted CA:
+Certificate verification only works if the CA used is trusted. In this case, we used our own CA certificate, so the verification succeeded. If we used a different or untrusted CA, the verification would fail.
+
+Why a certificate being valid is not enough:
+A certificate can be mathematically valid, but that doesn’t mean it should be trusted. Trust depends on which CA signed the certificate. If the CA is not trusted, the certificate should not be accepted.
+
+Why validity dates matter:
+The certificate includes a start date and an expiration date to limit how long it is considered valid. This helps reduce risk if a key is compromised, since the certificate will eventually expire and need to be replaced.
 
 ---
 
@@ -362,32 +404,49 @@ Demonstrate that trust is anchored entirely to the CA by creating a fake CA, sig
 ### Commands / Code Used
 
 ```bash
-# [INSERT COMMANDS HERE — fake CA keygen, fake CA self-signed cert, fake signing, both verify commands]
+openssl genpkey -algorithm RSA -out fake_ca_private.pem -pkeyopt rsa_keygen_bits:2048
+openssl req -x509 -new -key fake_ca_private.pem -out fake_ca_cert.pem -days 3650
+
+openssl genpkey -algorithm RSA -out eve_private.pem -pkeyopt rsa_keygen_bits:2048
+openssl rsa -pubout -in eve_private.pem -out eve_public.pem
+
+openssl req -new -key eve_private.pem -out eve.csr
+
+openssl x509 -req -in eve.csr -CA fake_ca_cert.pem -CAkey fake_ca_private.pem \
+-CAcreateserial -out eve_cert.pem -days 365 -sha256
+
+openssl verify -CAfile fake_ca_cert.pem eve_cert.pem
+openssl verify -CAfile ca_cert.pem eve_cert.pem
+
 ```
 
 ### Output Evidence
 
-> **✅ [INSERT SCREENSHOT HERE — task8_fake_verify_success.png]**
-> Show: fake cert verifying successfully with fake CA.
-
-> **❌ [INSERT SCREENSHOT HERE — task8_real_verify_fail.png]**
-> Show: fake cert failing verification with real CA (error message).
-
+![task8a](task8a.png)
+![task8b](task8b.png)
 ### Verification Results
 
-| Scenario | Certificate | CA Used to Verify | Result |
-|----------|-------------|------------------|--------|
-| Legitimate | Real entity cert | Real CA | [INSERT — OK] |
-| Fake accepted | Fake entity cert | Fake CA | [INSERT — OK] |
-| Fake rejected | Fake entity cert | Real CA | [INSERT — FAIL] |
+| Scenario | Certificate | CA Used | Result |
+|----------|-------------|--------|--------|
+| Fake CA verification | eve_cert.pem | fake_ca_cert.pem | OK |
+| Real CA verification | eve_cert.pem | ca_cert.pem | FAILED |
 
 ### Explanation
 
-**What was done:** We generated a completely independent "fake" CA — its own key pair and self-signed certificate — and used it to issue a certificate for the same entity identity as Task 6. We then attempted to verify this fake certificate against both the fake CA and the real CA.
+What was done:
+In this step, we created a fake Certificate Authority (CA) and used it to sign a certificate for Eve. We then verified the certificate using both the fake CA and the real CA to compare the results.
 
-**What happened:** When verified against the fake CA, the certificate passed — the fake CA's signature is mathematically valid, and the fake CA's public key correctly verifies it. When verified against the real CA, the certificate failed with an error indicating the signature could not be verified. The real CA never signed this certificate, so its public key produces a failed signature check.
+What happened:
+When verifying Eve’s certificate using the fake CA, the result returned OK, meaning the certificate was valid under that CA. However, when verifying the same certificate using the real CA, the verification failed. This shows that the certificate is only trusted when using the CA that signed it.
 
-**Why it matters:** This experiment makes the most important point in the entire lab: security depends entirely on which CA your system trusts. A technically valid certificate issued by an unrecognized CA is indistinguishable in structure from a legitimate one — the only difference is whose signature it carries. This is not a theoretical concern. In practice, enterprise network proxies routinely install a corporate root CA on employee devices and use it to issue certificates on the fly, allowing them to intercept and inspect TLS traffic. Nation-state actors have been caught compromising or coercing real CAs to issue fraudulent certificates for high-value domains. The defense — certificate transparency logs, browser pinning, and strict CA trust stores — all exist because of exactly this vulnerability.
+Why a certificate can be valid under one CA but not another:
+A certificate’s validity depends on the CA used during verification. Even though the certificate is correctly signed, it will only be accepted if the verifier trusts the CA that signed it. If a different CA is used, the signature cannot be verified, and the certificate is rejected.
+
+Why the CA is the real trust anchor:
+This experiment shows that the CA’s public key is the root of trust in a PKI system. If a user trusts the wrong CA, they can be tricked into accepting malicious certificates.
+
+Connection to real-world attacks:
+This is similar to real-world scenarios where attackers install fake root certificates on a system or use compromised CAs to issue fraudulent certificates. In these cases, the system may incorrectly trust malicious certificates, allowing attackers to intercept secure communications.
 
 ---
 
