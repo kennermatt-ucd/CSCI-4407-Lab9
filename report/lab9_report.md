@@ -79,29 +79,35 @@ Create the working directory structure required for the lab, populate it with me
 ### Commands / Code Used
 
 ```bash
-# [INSERT COMMANDS HERE — e.g., mkdir, cd, pwd, ls, touch]
+mkdir Key_Distribution_Lab
+cd Key_Distribution_Lab
+echo "Confidential payroll report for Alice." > msg1.txt
+echo "Server backup credentials for secure transfer." > msg2.txt
+echo "Session initialization data for Bob." > msg3.txt
+cat msg1.txt
+cat msg2.txt
+cat msg3.txt
+pwd
+ls -l
+sha256sum msg1.txt msg2.txt msg3.txt
 ```
 
 ### Output Evidence
 
-> **[INSERT SCREENSHOT HERE — task1_directory_setup.png]**
-> Show: terminal output of directory creation and `ls` listing all created files and folders.
+![alt text](task1.png)
 
 ### Directory Structure
 
 | Path | Purpose |
 |------|---------|
-| [INSERT] | [INSERT] |
-| [INSERT] | [INSERT] |
-| [INSERT] | [INSERT] |
+| `Key_Distribution_Lab/` | Root working directory for all lab files |
+| `Key_Distribution_Lab/msg1.txt` | Sample confidential payroll message |
+| `Key_Distribution_Lab/msg2.txt` | Sample server credentials message |
+| `Key_Distribution_Lab/msg3.txt` | Sample session initialization message |
 
 ### Explanation
 
-**What was done:** We created a structured working directory to hold all keys, certificates, and configuration files for the lab. Separate subdirectories were created so that CA material, entity keys, and signed certificates are kept organized and do not overwrite each other.
-
-**What happened:** The `ls` output confirmed that the directory and all required files were created successfully with the correct names and in the expected locations.
-
-**Why it matters:** In a real PKI deployment, the filesystem layout of key material is a security concern in its own right. Private keys should be stored in directories with restricted permissions (e.g., `chmod 700`) so that other users on the same system cannot read them. A disorganized setup makes it easy to accidentally use the wrong key or overwrite a CA certificate, which would invalidate every certificate it ever signed. Maintaining a clean, predictable directory structure is a foundational operational security practice.
+Having concrete files like `msg1.txt` through `msg3.txt` makes it easier to reason about what an attacker actually gains when key trust fails. These aren't abstract placeholders — they represent payroll data, credentials, and session info, the kind of content that has real consequences if it ends up in the wrong hands. If Eve ends up holding the decryption key instead of Alice (as in Task 2), she can read these files in full. The SHA-256 hashes also give us a baseline to detect any modification to the messages during the lab.
 
 ---
 
@@ -125,11 +131,7 @@ This is a **pen-and-paper reasoning task**. No commands were run.
 
 ### Explanation
 
-**What was done:** We analyzed the scenario where Alice sends her public key to Bob over an untrusted network without any third-party verification. We traced what information Bob actually receives and whether he has any way to confirm it genuinely came from Alice.
-
-**What happened:** The analysis reveals a fundamental gap: if Mallory sits on the network between Alice and Bob, she can intercept Alice's public key and replace it with her own before Bob receives it. Bob has no way to detect this substitution because the key arrives as raw bytes with no attached proof of origin. Bob encrypts his message using Mallory's key, Mallory decrypts it, reads it, re-encrypts it with Alice's real key, and forwards it. Neither Alice nor Bob observes anything unusual — the communication appears to work normally. The raw public key carries no binding to any identity.
-
-**Why it matters:** Encryption is only as useful as your confidence in whose key you hold. If you encrypt data with the wrong key, you have given that data to an attacker while believing it is secure. A Certificate Authority solves this by acting as a trusted third party: it verifies an entity's identity out-of-band (by checking documents, domain ownership, etc.), then issues a signed certificate that cryptographically binds that identity to a public key. Because the CA's signature can be verified by anyone who trusts the CA, a forged key substitution becomes detectable — Mallory cannot produce a certificate signed by the real CA for her own key while claiming to be Alice.
+Bob thinks he's encrypting for Alice, but since there's no authentication on the public key he received, he has no way to verify it actually belongs to her. Eve intercepts Alice's key, substitutes her own, and Bob unknowingly encrypts everything under Eve's key. Eve decrypts it, reads it, optionally modifies it, re-encrypts it with Alice's real key, and forwards it along. Neither side notices anything wrong because the encryption itself works fine — the failure is entirely in authenticity, not in the algorithm. Public availability of a key is not the same as proof of who it belongs to, which is exactly the gap a Certificate Authority closes.
 
 ---
 
@@ -148,33 +150,32 @@ Generate an RSA private key and derive the corresponding public key, producing t
 ### Commands / Code Used
 
 ```bash
-# [INSERT COMMANDS HERE — e.g., openssl genrsa, openssl rsa -pubout]
+openssl genpkey -algorithm RSA -out alice_private.pem -pkeyopt rsa_keygen_bits:2048
+openssl rsa -pubout -in alice_private.pem -out alice_public.pem
+ls -l alice_private.pem alice_public.pem
+openssl pkey -in alice_private.pem -text -noout
+openssl rsa -pubin -in alice_public.pem -text -noout
 ```
 
 ### Output Evidence
 
-> **[INSERT SCREENSHOT HERE — task3_keygen.png]**
-> Show: OpenSSL key generation output and confirmation of file creation.
-
-> **[INSERT SCREENSHOT HERE — task3_key_inspect.png]**
-> Show: partial contents of the public key PEM file.
+![alt text](task3.1.png)
+![alt text](task3.2.png)
+![alt text](task3.3.png)
+![alt text](task3.4.png)
 
 ### Key Details
 
 | Property | Value |
 |----------|-------|
 | Key type | RSA |
-| Key size (bits) | [INSERT] |
-| Private key file | [INSERT] |
-| Public key file | [INSERT] |
+| Key size (bits) | 2048 |
+| Private key file | `alice_private.pem` |
+| Public key file | `alice_public.pem` |
 
 ### Explanation
 
-**What was done:** We used OpenSSL to generate a 2048-bit RSA private key and then derived the corresponding public key from it. Both keys were exported to disk in PEM format, which is the standard base64-encoded format used by most PKI tools.
-
-**What happened:** OpenSSL produced two PEM files. The private key file contains the full RSA key material including the modulus, private exponent, and prime factors. The public key file contains only the modulus and public exponent — the values that can be safely shared with anyone.
-
-**Why it matters:** RSA is an asymmetric algorithm: the private and public keys are mathematically linked, but it is computationally infeasible to derive the private key from the public key alone. This asymmetry is what makes PKI possible. The private key is used to sign (or decrypt), and the public key is used to verify (or encrypt). If the private key is ever exposed, every certificate and signature produced with it is compromised. This is why private keys must stay on the machine that generated them and should never be transmitted or shared.
+The private key (`alice_private.pem`) must stay secret — it's what Alice uses to decrypt or sign, and if it leaks, everything built on top of it is compromised. The public key (`alice_public.pem`) can be freely shared since it only lets others encrypt to Alice or verify her signatures. That said, just having this key pair doesn't solve the distribution problem. Bob still has no way to verify that a file claiming to be Alice's public key actually belongs to her — it's just bytes on disk without any binding to an identity. That's what the next tasks address.
 
 ---
 
@@ -193,32 +194,32 @@ Create a self-signed Certificate Authority (CA) certificate that will be used to
 ### Commands / Code Used
 
 ```bash
-# [INSERT COMMANDS HERE — e.g., openssl req -x509 -newkey rsa:2048 -keyout ca.key -out ca.crt ...]
+openssl genpkey -algorithm RSA -out ca_private.pem -pkeyopt rsa_keygen_bits:2048
+openssl req -x509 -new -key ca_private.pem -out ca_cert.pem -days 3650
+openssl x509 -in ca_cert.pem -text -noout
+ls -l ca_private.pem ca_cert.pem
 ```
 
 ### Output Evidence
 
-> **[INSERT SCREENSHOT HERE — task4_ca_cert.png]**
-> Show: OpenSSL output of CA certificate creation and certificate details (subject, issuer, validity).
+![alt text](task4.1.png)
+
+![alt text](task4.2.png)
 
 ### CA Certificate Details
 
 | Field | Value |
 |-------|-------|
-| Subject | [INSERT] |
+| Subject | [INSERT — e.g., CN=Lab Root CA, O=...] |
 | Issuer | [INSERT — same as Subject for self-signed] |
 | Valid From | [INSERT] |
 | Valid To | [INSERT] |
-| Key file | [INSERT] |
-| Certificate file | [INSERT] |
+| Key file | `ca_private.pem` |
+| Certificate file | `ca_cert.pem` |
 
 ### Explanation
 
-**What was done:** We generated a separate RSA key pair for the CA and used OpenSSL's `-x509` flag to produce a self-signed certificate. Unlike a normal certificate, which is signed by a higher CA, a root CA signs its own certificate because there is no authority above it in the chain.
-
-**What happened:** The resulting certificate shows identical Subject and Issuer fields, which is the defining characteristic of a self-signed root CA certificate. This means the certificate asserts its own trustworthiness rather than receiving endorsement from another party.
-
-**Why it matters:** The CA certificate is the root of trust for the entire PKI system built in this lab. Every entity certificate signed by this CA inherits its trustworthiness — but only for parties who explicitly install and trust this CA certificate. This is exactly how real-world trust stores work: operating systems and browsers ship with a pre-installed list of trusted root CA certificates (e.g., DigiCert, Let's Encrypt, GlobalSign). When your browser trusts a website's certificate, it is because the certificate chains up to one of those pre-trusted roots. Our lab CA works the same way at a small scale.
+A CA's job is to vouch for the binding between a public key and an identity. In this lab we created our own self-signed root CA, which means the Subject and Issuer fields in `ca_cert.pem` are identical — there's no higher authority above it, so it signs itself. In a real deployment, root CAs are trusted because their certificates are already embedded in browsers and operating systems by the vendor; trust has to be anchored somewhere. We use 2048-bit RSA because it meets the current industry standard for security margin — below 2048 bits is considered weak by modern standards, and for a CA that may sign many certificates over 10 years, anything weaker would be inappropriate.
 
 ---
 
