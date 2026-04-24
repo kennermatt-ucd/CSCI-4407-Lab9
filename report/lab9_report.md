@@ -32,8 +32,6 @@
 13. [Task 10 – Why a Passive Attacker Fails](#task-10)
 14. [Task 11 – Man-in-the-Middle Attack on DH](#task-11)
 15. [Task 12 – Comparison and Reflection](#task-12)
-16. [Appendix – Scripts](#appendix)
-17. [Pre-Submission Checklist](#checklist)
 
 ---
 
@@ -555,157 +553,98 @@ Construct a step-by-step Man-in-the-Middle (MiTM) attack against unauthenticated
 
 ### Steps Performed
 
-This is a **pen-and-paper reasoning task**. No commands were run.
+No commands were run for this task (pen and paper).
 
-- Described Mallory's position between Alice and Bob
-- Walked through how Mallory intercepts and replaces each public key
-- Showed that Alice and Bob each share a key with Mallory, not each other
+- Described Eve's position between Alice and Bob
+- Walked through how Eve intercepts and replaces each public key
+- Showed that Alice and Bob each share a key with Eve, not each other
 - Explained why neither Alice nor Bob can detect the attack without authentication
 
-### Evidence
+### Evidence  
 
-> **[INSERT HANDWRITTEN WORK / TYPED REASONING HERE]**
+Alice generates her secret x, then computes X (X = g^x), and sends this computed value for X to Bob (or atleast it was intended for Bob).  
 
-### Attack Flow
+Eve (Our Active Attacker) intercepts the X that Alice has sent for Bob. Eve then generates her own secret this is called z, they then compute the value for E (E = g^z), and sends E to Bob then pretending E is X from Alice.  
+
+Bob generates his secret y, then computes Y (Y = g^y), and sends this computed value for Y to Alice (intended for Alice).   
+
+Eve then intercepts Y. She sends their own value of E (E = g^z) to Alice, pretending that it came from Bob.  
+
+Alice then receives E, and they compute the shared key, K(AE) = E^x = (g^z)^x = g^zx (mod p). Bob also receives E and they compute the shared key, K(EB) ​= E^y = (g^z)^y =g^zy (mod p).   
+
+Eve knows their own secret (Z) so eve is able to compute both of the key from Alice and Bob, K(AE) = X^z = (g^x)^z = g^xz (mod p) and K(EB) = Y^z = (g^y)^z = g^yz (mod p).  
+
+Explain the deception:   
+Alice computed their key (K(AE)) and believes that they shared their key securely with Bob. Bob computed their key (K(EB)) and believes that they shared it securely with Alice. What actually happened, Alice and Bob shared no keys with each other as their keys were intercepted by Eve, and from here Eve sent keys to both Alice and Bob to fool them into believing the process was completed sucessfully.   
+
+Explain what Eve can do:   
+Because Eve possesses both K(AE) and K(EB), they can engage decryption and data modification techniques. Eve with the keys can decrypt all messages between bob and alice using the key needed to decrypt the message. With the message now decrypted Eve can see the plaintext message and from here can both read the message or modify the contents of the message if they so desire. Once Eve has done what they want with the message they then Re-Encrypt the message and send it to whom ever it was destined for, and the reciever will decrypt the message and assume that it is an authentic message from the assumed sender.  
+
+Alice (sends message to Bob) -> Eve (decrypts the message) -> Eve (reads or modifies the message -> Eve (reencrypts the message) -> Eve (sends message to bob) -> Bob (decrypts the message) -> Bob (assumes message came from Alice)    
+
+Process repeats but from Bob to Alice.  
+
+Why the attack is possible: 
+The attack is possible due to the Diffie-Hellman exchange lacking any form authentication. Alice accepted the value E without requiring any cryptographic proof (like a digital signature) that the value actually originated from Bob. The exponentiation is actually secure but with no authentication it cannot be considered secure, as it can be faked by an adversary.  
+
+Why authenticated key exchange protocols are necessary: 
+Without authentication, you cannot put any trust in the mathematical security of the channel as the keys can be faked at any point durin the communication. Modern protocols (like TLS) solve this by requiring the server to digitally sign its Diffie Hellman's public parameters (X or Y) using its private RSA key. The client then verifies that signature is legitimate using the server's PKI certificate before accepting the key as a true genuine key from the destination they are trying to communicate with.  
+
+### Attack Flow as a Table  
 
 | Step | Actor | Action |
 |------|-------|--------|
-| 1 | Alice | Sends public key `A = g^a mod p` to Bob |
-| 2 | Mallory | Intercepts `A`; sends her own `M1 = g^m1 mod p` to Bob |
-| 3 | Bob | Sends public key `B = g^b mod p` to Alice |
-| 4 | Mallory | Intercepts `B`; sends her own `M2 = g^m2 mod p` to Alice |
-| 5 | Alice | Computes shared key with `M2` — believes she's talking to Bob |
-| 6 | Bob | Computes shared key with `M1` — believes he's talking to Alice |
-| 7 | Mallory | Holds both shared keys; decrypts, reads, re-encrypts all traffic |
-
-### Explanation
-
-**What was done:** We constructed a complete MiTM attack against an unauthenticated DH exchange. Mallory positions herself on the network path between Alice and Bob and performs two simultaneous DH exchanges: one with Alice (posing as Bob) and one with Bob (posing as Alice).
-
-**What happened:** After the attack, Alice holds a shared key with Mallory and Bob holds a different shared key with Mallory. Neither Alice nor Bob shares a key with the other. All messages Alice sends to "Bob" are actually encrypted with Mallory's key, so Mallory can decrypt them, read them, re-encrypt them with the key she shares with Bob, and forward them. The conversation appears completely normal to both Alice and Bob — there is no error, no delay, and no visible indication that a third party is present. Mallory can read, modify, or selectively drop any message in the session.
-
-**Why it matters:** This attack reveals the critical limitation of unauthenticated DH: it is perfectly secure against a passive attacker (Task 10) but completely broken against an active attacker. The root cause is the same problem identified in Task 2 — there is no binding between a public key and an identity. Mallory can substitute her own DH public value for Alice's because Bob has no way to verify that the value he received actually came from Alice. The fix is authentication: if Alice's DH public key is signed with a certificate issued by a trusted CA, Bob can verify that signature before using the key. This is precisely how TLS works — the server's DH (or ECDH) public key is included in a certificate signed by a trusted CA, which the client verifies before proceeding. DH provides the forward-secure key exchange; PKI provides the authentication that defeats MiTM.
+| 1 | Alice | Sends public key `X = g^x mod p` to Bob |  
+| 2 | Eve | Intercepts `X`; sends her own `E = g^z mod p` to Bob |  
+| 3 | Bob | Sends public key `Y = g^y mod p` to Alice |  
+| 4 | Eve | Intercepts `Y`; sends her own `E = g^z mod p` to Alice |  
+| 5 | Alice | Computes shared key with `E` — believes she's talking to Bob |  
+| 6 | Bob | Computes shared key with `E` — believes he's talking to Alice |  
+| 7 | Eve | Holds both shared keys; decrypts, reads, re-encrypts all traffic | 
 
 ---
 
-## Task 12 – Comparison and Reflection <a name="task-12"></a>
+## Task 12 – Comparison and Reflection <a name="task-12"></a>  
 
-### Objective
+### Objective  
 
-Synthesize all experimental results into a structured comparison and reflection, articulating the security properties, limitations, and real-world roles of each mechanism explored in this lab.
+Synthesize all experimental results into a structured comparison and reflection, articulating the security properties, limitations, and real-world roles of each mechanism explored in this lab.  
 
-### Comparison Table
+### Comparison Table  
 
-| Mechanism | Solves | Key Weakness | Real-World Use |
-|-----------|--------|-------------|---------------|
-| Raw Public Key | Confidentiality without a pre-shared secret | No identity binding — vulnerable to key substitution (Task 2) | PGP / GPG with manual key verification (web of trust) |
-| PKI / CA Certificates | Trust — cryptographically binds a public key to a verified identity | CA compromise or rogue CA undermines all certificates it issued | HTTPS, S/MIME email signing, code signing |
-| Diffie-Hellman (unauthenticated) | Secure key exchange over a public channel; resistant to passive eavesdropping | Completely vulnerable to active MiTM when used without authentication (Task 11) | Not used alone in practice |
-| Authenticated DH (DH + PKI) | Secure key exchange + verified identity; defeats both eavesdropping and MiTM | Certificate management overhead; reliance on CA ecosystem | TLS 1.2 cipher suites using DHE with server certificates |
-| TLS (PKI + ephemeral session keys) | Confidentiality, integrity, authentication, and forward secrecy in one protocol | Misconfiguration (weak ciphers, expired certs); CA ecosystem risks | HTTPS, FTPS, SMTPS, VPNs — essentially all secure internet traffic |
-
----
-
-### Reflection Questions
-
-**1. Why is key distribution the hardest problem in cryptography?**
-
-Encryption algorithms themselves can be made arbitrarily strong — the mathematical operations are well understood and publicly scrutinized. The hard part is getting the right key to the right person without an attacker intercepting or substituting it. Any secure channel used to distribute a key already requires the parties to share some prior secret or trusted anchor — which simply pushes the problem back one level. This is a circular dependency: to communicate securely, you need a shared key; to establish a shared key, you need a secure channel. Diffie-Hellman breaks the circular dependency for the key exchange itself, but as Task 11 shows, it does not solve the authentication problem. PKI solves authentication but requires trusting a CA, which requires trusting that the CA's root certificate was distributed to you honestly. Ultimately, trust must originate somewhere — PKI moves that requirement to a small set of well-audited root CAs rather than every individual key, which is a practical improvement but not a theoretical elimination of the problem.
+| Mechanism | Authentication | Passive Eavesdropper Protection | Man in The Middle Protection |  
+|-----------|--------|-------------|---------------|  
+| Raw Public Key | None - simply asks for a key | No | No - Eavesdropper can forge a key and conduct a MITM Attack |  
+| PKI / CA Certificates | Yes - Certificate is signed by the CA | Yes | Yes - The signature is not able to be forged from the CA |  
+| Diffie-Hellman (unauthenticated) | Secure key exchange over a public channel; resistant to passive eavesdropping | Completely vulnerable to active MiTM when used without authentication (Task 11) | Not used alone in practice |  
+| Authenticated DH (DH + PKI) | None | Yes - The key computations protects contents from a eavesdropper | None - Attaker can forge the key and set themselves up as MITM |  
+| TLS (PKI + ephemeral session keys) | Yes - PKI provides authentication protection over the Diffie Hellman Key exchange | Yes - Diffie Hellman hides the key | Yes - PKI signatures prevent key forgery |  
 
 ---
 
-**2. Why does Diffie-Hellman fail as a complete solution, and what does PKI add?**
+### Long Lived Keys
+Long lived keys (also known as static or long life keys) are cryptographic keys designed to remain valid and secure over an extended period of time, often years or decades (already doesn't sound secure). Their primary purpose is authentication and identity verification, rather than the encryption of any kind of data. Because generating, certifying, and distributing these keys is a rigorous and slow process, they are designed and intended to be set up once and used many times over and over.  
 
-DH solves the key exchange problem under the assumption that both parties are talking directly to each other. It provides no mechanism to verify that assumption. As demonstrated in Task 11, an active attacker can intercept both sides of the exchange and establish independent shared keys with each party, making each party believe they are communicating securely with the other while the attacker reads everything. DH is mathematically sound — the problem is that it is unauthenticated. PKI adds authentication by binding each party's public key to a verified identity through a CA-signed certificate. When Bob receives Alice's DH public key, he can check the attached certificate: was it signed by a CA he trusts, and does it name Alice? If yes, he has strong evidence the key actually belongs to Alice and not to an impostor. PKI does not change the math of DH — it adds the identity verification layer that makes the exchange trustworthy.
+Examples of these long lived keys include:  
 
----
+  An RSA private key: Used to digitally sign documents or authenticate to a network (like an SSH key).  
 
-**3. How does TLS combine PKI and session key exchange to solve both problems?**
+  A server's certificate private key: Held securely by a web server (like an HTTPS site) to prove its identity to visiting browsers.  
 
-TLS uses PKI to solve the authentication problem and ephemeral Diffie-Hellman (or ECDH) to solve the key exchange problem, combining them to achieve authenticated, forward-secure communication. During the TLS handshake, the server presents its certificate — signed by a trusted CA — which the client verifies. This solves authentication: the client knows it is talking to the genuine server and not an impostor. The server's certificate also includes or accompanies the server's ephemeral DH public key, which may itself be signed to prove it came from the authenticated server. Both parties then complete the DH exchange to derive a session key that was never transmitted. Forward secrecy comes from the ephemeral nature of the DH keys: even if the server's long-term private key is later compromised, the session keys for past sessions cannot be recovered because the ephemeral DH private keys have been discarded. TLS therefore provides confidentiality (session key encryption), integrity (HMAC or AEAD), authentication (PKI certificates), and forward secrecy (ephemeral DH) in a single protocol.
+  A trusted CA root key: A very important long lived key type, often kept completely offline in highly secure systems (typically called Vaults). They are used exclusively to sign the certificates of intermediate authorities (AKA the Certificate Authority).  
 
----
+  A long term shared secret: Used in specialized systems like Kerberos or pre shared key VPN setups where devices have a static and hardcoded passwords used to authenticate.  
 
-**4. What is the consequence of trusting a compromised or rogue CA?**
+### Session Keys  
 
-A trusted CA has the authority to issue certificates for any domain or identity. If a CA's private key is stolen, an attacker can issue legitimate-looking certificates for any website — a bank, a government service, an email provider — and use those certificates to impersonate those services to anyone who trusts that CA. Because the certificates are cryptographically valid, standard TLS verification will succeed, and the user's browser will show the padlock icon without any warning. All traffic to those impersonated services can be intercepted, decrypted, and read by the attacker. This is not hypothetical: in 2011, the Dutch CA DigiNotar was compromised and attackers issued fraudulent certificates for Google, used to intercept the communications of Iranian users. DigiNotar was subsequently removed from all major trust stores, immediately revoking trust in every certificate it had ever issued and rendering those sites unusable until they obtained new certificates from other CAs.
+A session key is a temporary type of cryptographic key that is generated exclusively for a singular communication session. Unlike the long lived keys, session keys are usually symmetric (like an AES key) and are generated on a when needed basis as two parties connect to each other. They are used to encrypt the actual data that is to be transmitted during that specific interaction and are deconstructed/destroyed securely by both parties the moment the session is ended or the key lifecycle times out.  
 
----
+#### Session key preference  
 
-**5. How does the fake CA experiment (Task 8) connect to real-world attacks such as SSL interception by enterprise proxies or nation-state actors?**
+Real world systems rarely use long-lived keys to encrypt any amounts of data they instead choose to use long-lived keys to authenticate the creation of a session key to encrypt this data. This architecture is preferable for several reasons, Long-lived keys typically rely on asymmetric algorithms (like RSA keys) and these algorithms involve complex mathematical operations on massive number sets (2048-bit modular exponentiation, etc.). These algorithms are orders of magnitude slower than what is needed for encrypting something like a real time video, a transfer of large files, or general web browsing. Session keys however, use a symmetric algorithm (like AES keys) and these algorithms are incredibly fast and make use of hardware acceleration to encrypt traffic in real time. If an attacker records encrypted network traffic for as much time as needed and eventually manages to steal a server's long lived private key, they still are not able to go back and decrypt the old traffic if session keys were used in the communication. This is because a unique session key was generated (Using Diffie Hellman) and then was destroyed during the duration session, a long lived key getting compromised does not compromise the entire system and keeps the integrity of the old confidentiality. If a long lived key had been used for encryption of the data then all of the historical data would be instantly exposed. Using separate keys for each session enforces a clean structural boundary, as asymmetric keys handle the heavy lifting of proving who you are through authentication, while the symmetric keys handle the heavy lifting of protecting our data through encryption. Relying on session keys allows for quick and often key rotation whereas during a long lived connection (like a VPN tunnel that may stay open for days), the protocol can automatically configure a new session key every hour. This limits the amount of ciphertext an attacker can gather under a single key and therefore significantly reduces the viability of mathematical cryptanalysis.
 
-Task 8 demonstrated that a certificate signed by a fake CA is technically indistinguishable from one signed by a real CA — the only difference is whether the verifying party has installed and trusts that CA. Enterprise SSL inspection proxies exploit exactly this: a company installs its own root CA certificate on all corporate devices, then deploys a network appliance that intercepts outbound HTTPS connections, decrypts them using a certificate it issues on the fly (signed by the corporate CA), reads or logs the content, re-encrypts, and forwards the traffic. Employees see a valid padlock because their machine trusts the corporate CA. Nation-state actors have pursued the same approach — by coercing or compromising a CA that is trusted by default in major browsers, they can issue certificates for target domains and intercept traffic without the victim detecting anything. Certificate Transparency (CT) logs, implemented by Google and now required by major browsers, partially mitigate this by requiring all publicly-trusted certificates to be logged in an auditable, append-only record — making it possible to detect unauthorized certificate issuance after the fact.
+### Reflection
 
----
-
-**6. What is the key takeaway from comparing digital signatures (Lab 8) with PKI-based key distribution (this lab)?**
-
-Lab 8 showed that digital signatures provide strong integrity and non-repudiation guarantees — but only if the verifier already holds the correct public key for the signer. The signature scheme itself is mathematically sound regardless of how the key was obtained. This lab shows that "holding the correct public key" is not a trivial assumption — it is the entire key distribution problem. PKI is the infrastructure that makes digital signatures useful in open settings by providing a trusted mechanism for distributing and authenticating public keys at scale. The two labs together demonstrate a layered security model: digital signatures solve integrity and authentication at the message level, while PKI solves key distribution and identity binding at the infrastructure level. Neither is sufficient without the other. A signature from an unverified key proves that someone holds a particular private key, but tells you nothing about who that someone is. PKI provides the link between the key and the identity, making the signature meaningful in the real world.
+Throughout this lab we came to the realization that robust mathematical encryption algorithms are entirely useless if the key distribution process is flawed (like missing authentication). Key distribution is far harder than it first appears because ensuring confidentiality over an open network does not automatically ensure authenticity, as you may be communicating perfectly securely with an active attacker performing something like a MITM attack. Public key cryptography, while it solves the problems poised by the pre sharing of a key, it still requires absolute authenticity and this weakness is a massive exploit. If Bob receives Alice's raw public key over the internet, he has no mathematical guarantee that the key wasn't forged by Eve during transit. This is why Public Key Infrastructure (PKI) is essential for data integrity, as PKI shifts the burden of trust from individual key exchanges to a hierarchical system anchored by a globally trusted Certificate Authority (CA) therefore allowing Bob to verify Alice’s identity via the CA's unforgeable digital signatures. Similarly, the Diffie Hellman tests showed us that while the algorithm effectively establishes a shared secret that is immune to passive eavesdropping, its lack of inherent authentication renders it immensely vulnerable to Man in the Middle attacks. An active attacker can simply work with separate secure channels with both parties and mimic secure traffic. This vulnerability shows why modern protocols such as TLS, rely exclusively on authenticated session key before establishing a connection between users. By using long lived PKI certificates to digitally sign the Diffie Hellman parameters during the handshake, modern systems are capable of perfectly merging the verifiable identity of asymmetric cryptography with the high speed forward secure encryption of symmetric session keys aloowing us to achieve true secure communication.
 
 ---
-
-## Conclusion
-
-This lab explored the complete chain of problems and solutions in public key distribution, tracing the path from raw key exchange to the PKI infrastructure underlying modern secure communications.
-
-Tasks 1 through 4 established the operational foundation: generating RSA keys, creating a CA, and understanding why a self-signed root certificate is the anchor of the entire system. Task 2 demonstrated analytically that raw public key distribution is insufficient — without a trusted third party, an attacker can silently substitute their own key, breaking confidentiality without either party noticing.
-
-Tasks 5 through 7 implemented the PKI workflow: generating a CSR, having the CA sign it, and verifying the resulting certificate. The Subject/Issuer distinction in the signed certificate is what transforms a self-claim into a third-party endorsement backed by the CA's cryptographic signature.
-
-Task 8 was the most instructive experiment in the lab. By creating a fake CA and demonstrating that its certificates pass verification against themselves but fail against the real CA, we showed concretely that trust is entirely a function of which CA your system recognizes. This connects directly to real-world attacks involving rogue CAs and enterprise SSL interception — the math is identical, only the trust context differs.
-
-Tasks 9 through 11 covered Diffie-Hellman in depth. The Python implementation confirmed that two parties can independently derive the same shared secret without ever transmitting it, with security grounded in the discrete logarithm problem. Task 10 confirmed this security holds against a passive attacker. Task 11 showed it completely fails against an active attacker — Mallory can intercept and replace both public keys, establishing independent shared secrets with each party while they believe they are communicating with each other. This is the fundamental limitation that motivates combining DH with PKI.
-
-Task 12 synthesized these findings into a unified picture: PKI solves the authentication problem that DH cannot, and DH provides forward-secure key exchange that PKI alone does not offer. TLS brings both together, which is why it is the security foundation for essentially all modern internet communication. The overarching lesson of this lab is that encryption is only as secure as the trust model it operates within — strong algorithms are necessary but not sufficient if the key distribution and authentication infrastructure is weak.
-
----
-
-## Appendix – Scripts <a name="appendix"></a>
-
-### A. dh.py
-
-```python
-# [CODE HERE]
-```
-
----
-
-## Pre-Submission Checklist <a name="checklist"></a>
-
-Use this checklist before exporting to PDF.
-
-### Placeholders Cleared
-
-- [ ] Submission date filled in
-- [ ] All `[INSERT]` cells in tables filled in
-- [ ] All `[CODE HERE]` blocks replaced with actual script contents
-
-### Screenshots Present
-
-- [ ] task1_directory_setup.png
-- [ ] task3_keygen.png
-- [ ] task3_key_inspect.png
-- [ ] task4_ca_cert.png
-- [ ] task5_csr.png
-- [ ] task6_signing.png
-- [ ] task7_verify_success.png
-- [ ] task8_fake_verify_success.png ✅
-- [ ] task8_real_verify_fail.png ❌
-- [ ] task9_run1.png
-- [ ] task9_run2.png
-
-### Content Check
-
-- [ ] Every command task has: Objective + Steps Performed + Commands + Screenshot(s) + Explanation
-- [ ] Tasks 2, 10, 11 include handwritten / clearly shown manual reasoning
-- [ ] Task 8 has BOTH screenshots (fake cert passes fake CA AND fails real CA)
-- [ ] Task 9 DH script run at least twice (original values + changed values)
-- [ ] Task 12 comparison table Real-World Use column filled in (pre-filled above — confirm it matches your output)
-- [ ] Appendix contains dh.py script
-- [ ] No raw output submitted without explanation
-- [ ] All code blocks correctly formatted
-- [ ] PDF exports cleanly with no broken layout
-
----
-
-*End of Report*
