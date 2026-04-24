@@ -113,19 +113,19 @@ Having concrete files like `msg1.txt` through `msg3.txt` makes it easier to reas
 
 ### Objective
 
-Reason through — without code — why distributing a raw public key is insufficient to establish trust, and identify what is missing.
+Reason through why distributing a raw public key is insufficient to establish trust, and identify what is missing.
 
 ### Steps Performed
 
 This is a **pen-and-paper reasoning task**. No commands were run.
 
 - Considered the scenario: Alice distributes her public key directly to Bob
-- Identified the attack: Mallory intercepts and substitutes her own public key
+- Identified the attack: Eve intercepts and substitutes her own public key
 - Explained what a Certificate Authority adds to solve this
 
 ### Evidence
 
-> **[INSERT HANDWRITTEN WORK / TYPED REASONING HERE]**
+![alt text](image.png)
 
 ### Explanation
 
