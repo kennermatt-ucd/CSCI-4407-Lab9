@@ -229,7 +229,7 @@ Generate a Certificate Signing Request (CSR) for an entity whose identity needs 
 
 ### Steps Performed
 
-- Generated a private key for the entity (e.g., a server or user)
+- Used the existing private key from Task 3
 - Created a CSR containing the entity's public key and identity information
 - Inspected the CSR to confirm its contents
 
@@ -291,11 +291,12 @@ Have the CA sign the CSR from Task 5, producing a certificate that binds the ent
 
 ### Commands / Code Used
 
+
 ```bash
 openssl x509 -req -in alice.csr -CA ca_cert.pem -CAkey ca_private.pem \
 -CAcreateserial -out alice_cert.pem -days 365 -sha256
 
-openssl x509 -in alice_cert.pem -text -noout```
+openssl x509 -in alice_cert.pem -text -noout
 ```
 
 ### Output Evidence
