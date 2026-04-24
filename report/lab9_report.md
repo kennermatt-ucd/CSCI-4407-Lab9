@@ -6,7 +6,7 @@
 **Semester:** Spring 2026
 **Instructor:** Dr. Victor Kebande
 **Teaching Assistant:** Celest Kester
-**Submission Date:** [INSERT DATE]
+**Submission Date:** April 24, 2026
 
 **Group Members:**
 - Matthew Kenner
@@ -208,10 +208,10 @@ ls -l ca_private.pem ca_cert.pem
 
 | Field | Value |
 |-------|-------|
-| Subject | [INSERT — e.g., CN=Lab Root CA, O=...] |
-| Issuer | [INSERT — same as Subject for self-signed] |
-| Valid From | [INSERT] |
-| Valid To | [INSERT] |
+| Subject | C=US, ST=Colorado, L=Denver, O=CU Denver, OU=10, CN=Group 10 |
+| Issuer | C=US, ST=Colorado, L=Denver, O=CU Denver, OU=10, CN=Group 10 |
+| Valid From | Apr 24 04:00:40 2026 GMT |
+| Valid To | Apr 21 04:00:40 2036 GMT |
 | Key file | `ca_private.pem` |
 | Certificate file | `ca_cert.pem` |
 
@@ -236,7 +236,9 @@ Generate a Certificate Signing Request (CSR) for an entity whose identity needs 
 ### Commands / Code Used
 
 ```bash
-# [INSERT COMMANDS HERE — e.g., openssl req -new -newkey rsa:2048 -keyout server.key -out server.csr ...]
+openssl req -new -key alice_private.pem -out alice.csr
+openssl req -in alice.csr -text -noout
+ls -l alice.csr
 ```
 
 ### Output Evidence
@@ -306,7 +308,7 @@ openssl x509 -in alice_cert.pem -text -noout```
 | Field | Value |
 |-------|-------|
 | Subject | C=US, ST=Colorado, L=Denver, O=CU Denver, OU=Computer Science, CN=Alice |
-| Issuer | C=US, ST=Colorado, L=Denver, O=CU Denver, OU=Computer Science, CN=Lab 9 |
+| Issuer | C=US, ST=Colorado, L=Denver, O=CU Denver, OU=10, CN=Group 10 |
 | Valid From | Apr 24 17:18:25 2026 GMT |
 | Valid To | Apr 24 17:18:25 2027 GMT |
 | Signed by | ca_cert.pem |
@@ -352,7 +354,6 @@ openssl x509 -in alice_cert.pem -noout -dates```
 
 ### Output Evidence
 
-> **[INSERT SCREENSHOT HERE — task7_verify_success.png]**
 ![task7](task7.png)
 ### Verification Result
 
@@ -365,7 +366,7 @@ openssl x509 -in alice_cert.pem -noout -dates```
 | Field | Value |
 |------|------|
 | Subject | C=US, ST=Colorado, L=Denver, O=CU Denver, OU=Computer Science, CN=Alice |
-| Issuer | C=US, ST=Colorado, L=Denver, O=CU Denver, OU=Computer Science, CN=Lab 9 |
+| Issuer | C=US, ST=Colorado, L=Denver, O=CU Denver, OU=10, CN=Group 10 |
 | Valid From | Apr 24 17:18:25 2026 GMT |
 | Valid To | Apr 24 17:18:25 2027 GMT |
 
@@ -675,8 +676,8 @@ Synthesize all experimental results into a structured comparison and reflection,
 |-----------|--------|-------------|---------------|  
 | Raw Public Key | None - simply asks for a key | No | No - Eavesdropper can forge a key and conduct a MITM Attack |  
 | PKI / CA Certificates | Yes - Certificate is signed by the CA | Yes | Yes - The signature is not able to be forged from the CA |  
-| Diffie-Hellman (unauthenticated) | Secure key exchange over a public channel; resistant to passive eavesdropping | Completely vulnerable to active MiTM when used without authentication (Task 11) | Not used alone in practice |  
-| Authenticated DH (DH + PKI) | None | Yes - The key computations protects contents from a eavesdropper | None - Attaker can forge the key and set themselves up as MITM |  
+| Diffie-Hellman (unauthenticated) | None — no identity verification | Yes — discrete log problem prevents passive key recovery | No — vulnerable to active attacker substituting public keys (Task 11) |  
+| Authenticated DH (DH + PKI) | Yes — PKI certificates verify identity of each party | Yes — DH key computation hides the shared secret | Yes — PKI signatures prevent key substitution |  
 | TLS (PKI + ephemeral session keys) | Yes - PKI provides authentication protection over the Diffie Hellman Key exchange | Yes - Diffie Hellman hides the key | Yes - PKI signatures prevent key forgery |  
 
 ---
