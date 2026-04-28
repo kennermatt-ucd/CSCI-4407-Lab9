@@ -543,11 +543,13 @@ Reason through — without code — why an attacker who only observes the Diffie
 
 No commands were run for this task (pen and paper).  
 
-- Identified what a passive attacker can observe: `p`, `g`, `A = g^a mod p`, `B = g^b mod p`  
-- Explained why recovering `a` or `b` from these values is computationally infeasible  
-- Confirmed the attacker cannot compute `g^(ab) mod p` without knowing `a` or `b`  
+- Identified what a passive attacker can observe: `p`, `g`, `X = g^x mod p`, `Y = g^y mod p`  
+- Explained why recovering `x` or `y` from these values is computationally infeasible  
+- Confirmed the attacker cannot compute `g^(xy) mod p` without knowing `x` or `y`  
 
 ### Evidence  
+
+![task 10 Pen and Paper](task10.jpg)
 
 Public Parameters:  
   - p (Prime number modulus)  
